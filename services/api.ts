@@ -1,14 +1,20 @@
-import { DashboardStats, Topic, TopicDetail, Flashcard, ExamPreset, ProfileStats, TopicMastery, TestResult } from "../types";
+import { DashboardStats, Topic, TopicDetail, Flashcard, ExamPreset, ProfileStats, TopicMastery, TestResult, GenerateTestPayload, Test, SubmitTestPayload } from "../types";
 
 // The single source of truth for the backend URL.
-const API_BASE_URL = 'https://ec10e335c44e.ngrok-free.app';
+const API_BASE_URL = 'https://29335634d68b.ngrok-free.app';
 
 // Helper function for making API requests and handling errors
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const headers = {
-        ...options.headers,
-        'ngrok-skip-browser-warning': 'true'
+    const headers: HeadersInit = {
+        'ngrok-skip-browser-warning': 'true',
+        ...options.headers
     };
+    
+    // Do not set Content-Type for FormData, the browser does it.
+    if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
+
 
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
@@ -67,19 +73,17 @@ export const getExamPresets = (): Promise<ExamPreset[]> => {
     return apiFetch<ExamPreset[]>('/api/v1/presets');
 };
 
-// --- Test Runner ---
-export const submitTest = (testId: string, answers: any): Promise<{ jobId: string }> => {
-    return apiFetch<{ jobId: string }>(`/api/v1/tests/${testId}/submit`, {
+export const generateTest = (payload: GenerateTestPayload): Promise<Test> => {
+    return apiFetch<Test>('/api/v1/tests/generate', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify(payload),
     });
 };
 
-export const getTestResult = (jobId: string): Promise<TestResult> => {
-    // This assumes a polling mechanism. A real implementation might be more complex.
-    // For now, we make a single request to a hypothetical results endpoint.
-    return apiFetch<TestResult>(`/api/v1/results/${jobId}`);
+// --- Test Runner ---
+export const submitTest = (payload: SubmitTestPayload): Promise<TestResult> => {
+    return apiFetch<TestResult>(`/api/v1/tests/submit`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
 };

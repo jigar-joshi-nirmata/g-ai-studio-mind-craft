@@ -1,31 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { MOCK_TEST } from '../constants';
 import { Question, QuestionType, Test } from '../types';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import { submitTest } from '../services/api';
+import Spinner from '../components/ui/Spinner';
 
 const TestRunnerPage: React.FC = () => {
-  const { testId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // In a real app, fetch test by ID if location.state is null
-  // For the hackathon, we pass generated questions via state or use mock
-  const [test, setTest] = useState<Test>(location.state ? {
-      id: testId || 'generated-test',
-      name: location.state.name,
-      questions: location.state.questions,
-      duration: 15, // placeholder
-      subject: 'Custom' // placeholder
-  } : MOCK_TEST);
+  const [test, setTest] = useState<Test>(location.state?.test || MOCK_TEST);
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [timeLeft, setTimeLeft] = useState(test.duration * 60);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+
   const currentQuestion = test.questions[currentQuestionIndex];
+
+  useEffect(() => {
+    if (!location.state?.test) {
+        console.warn("TestRunnerPage accessed without a test object. Using mock test.");
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -35,7 +36,7 @@ const TestRunnerPage: React.FC = () => {
   }, []);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
-    if (currentQuestion.type === QuestionType.MultiSelect) {
+    if (currentQuestion.type === 'multi-select' as any) { 
       const currentAnswers = (answers[questionId] as string[] || []);
       const newAnswers = currentAnswers.includes(answer)
         ? currentAnswers.filter(a => a !== answer)
@@ -97,9 +98,24 @@ const TestRunnerPage: React.FC = () => {
     return 'bg-slate-200 dark:bg-slate-800';
   };
 
-  const handleConfirmSubmit = () => {
-    setIsConfirmModalOpen(false);
-    navigate(`/grading/${test.id}`);
+  const handleConfirmSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmissionError(null);
+    try {
+        const payload = {
+            answers: answers,
+            durationSeconds: (test.duration * 60) - timeLeft,
+            fullTestContext: test,
+        };
+        const result = await submitTest(payload);
+        navigate(`/results/${test.id}`, { state: { result } });
+    } catch (error) {
+        setSubmissionError("Failed to submit test. Please try again.");
+        console.error("Submission failed", error);
+    } finally {
+        setIsSubmitting(false);
+        setIsConfirmModalOpen(false);
+    }
   }
 
   return (
@@ -155,9 +171,18 @@ const TestRunnerPage: React.FC = () => {
       <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title="Submit Your Test?">
         <div className="text-center">
             <p className="text-lg text-slate-600 dark:text-slate-300 mb-6">Are you sure you want to finish and submit your test for grading?</p>
+            {submissionError && <p className="text-sm text-red-400 mb-4">{submissionError}</p>}
             <div className="flex justify-center gap-4">
-                <Button variant="secondary" onClick={() => setIsConfirmModalOpen(false)}>Cancel</Button>
-                <Button variant="primary" onClick={handleConfirmSubmit}>Yes, Submit Now</Button>
+                <Button variant="secondary" onClick={() => setIsConfirmModalOpen(false)} disabled={isSubmitting}>Cancel</Button>
+                <Button variant="primary" onClick={handleConfirmSubmit} disabled={isSubmitting}>
+                    {isSubmitting ? (
+                        <>
+                            <Spinner className="w-5 h-5 mr-2" /> Submitting...
+                        </>
+                    ) : (
+                        'Yes, Submit Now'
+                    )}
+                </Button>
             </div>
         </div>
       </Modal>

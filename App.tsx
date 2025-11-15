@@ -7,7 +7,6 @@ import TestBuilderPage from './pages/TestBuilderPage';
 import TestRunnerPage from './pages/TestRunnerPage';
 import Profile from './pages/Profile';
 import { AppContextProvider } from './context/AppContext';
-import GradingPage from './pages/GradingPage';
 import TestResultPage from './pages/TestResultPage';
 
 const App: React.FC = () => {
@@ -24,7 +23,6 @@ const App: React.FC = () => {
           </Route>
           {/* Routes outside MainLayout for fullscreen experience */}
           <Route path="test-runner/:testId" element={<TestRunnerPage />} />
-          <Route path="grading/:testId" element={<GradingPage />} />
           <Route path="results/:testId" element={<TestResultPage />} />
         </Routes>
       </HashRouter>

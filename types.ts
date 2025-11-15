@@ -1,8 +1,10 @@
 
+// Fix: Import 'FC' type from 'react' to resolve 'React' namespace error.
+import type { FC } from 'react';
+
 export enum QuestionType {
   MultipleChoice = 'mcq',
   ShortAnswer = 'sa',
-  MultiSelect = 'msq',
 }
 
 export interface QuestionOption {
@@ -20,7 +22,7 @@ export interface Question {
 }
 
 export interface Test {
-  id: string;
+  id:string;
   name: string;
   subject: string;
   duration: number; // in minutes
@@ -31,7 +33,6 @@ export interface Topic {
   id: string;
   title: string;
   summary: string;
-  // FIX: Added missing properties to match the data structure in constants.ts
   mastery?: number;
   lastReviewed?: string;
 }
@@ -74,16 +75,33 @@ export interface Achievement {
   id: string;
   name: string;
   description: string;
-  icon: React.FC<{className?: string}>;
+  // Fix: Use 'FC' type which was imported.
+  icon: FC<{className?: string}>;
   achieved: boolean;
 }
 
 export interface TopicMastery {
     topic: string;
     mastery: number; // 0-1
-    // FIX: Added missing property to match the data structure in constants.ts
-    subject?: string;
 }
+
+// API Payload Types
+export interface GenerateTestPayload {
+  examType: 'custom' | string;
+  difficulty: 'easy' | 'standard' | 'hard';
+  examName?: string;
+  numQuestions?: number;
+  questionFormat?: 'objective' | 'subjective';
+  presetDuration?: 'quick' | 'standard' | 'endurance';
+  syllabusContent?: string;
+}
+
+export interface SubmitTestPayload {
+  answers: Record<string, string | string[]>;
+  durationSeconds: number;
+  fullTestContext: Test;
+}
+
 
 // API Response Types
 export interface DashboardStats {
